@@ -14,7 +14,7 @@ def build_application(app):
 
 def docker_compose_up():
     print("Running containers!")
-    os.popen("docker-compose up --build -d").read()
+    os.popen("docker compose up --build -d").read()
     print("Pipeline finished!")
 
 

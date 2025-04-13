@@ -48,11 +48,11 @@ services:
 
   kafka:
     container_name: kafka
-    image: obsidiandynamics/kafka # kafka +zookeeper
+    image: obsidiandynamics/kafka # kafka + zookeeper
     restart: "no"
     ports:
-      - "2181:2181"
-      - "9092:9092"
+      - "2181:2181" # zookeepr
+      - "9092:9092" # kafka
     networks:
       - orchestrator-saga
     environment:

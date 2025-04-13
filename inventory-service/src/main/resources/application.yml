@@ -2,6 +2,16 @@ server:
   port: 8092
 
 spring:
+  kafka:
+    bootstrap-servers: ${KAFKA_BROKER:localhost:9092}
+    topic:
+      orchestrator: orchestrator
+      inventory-success: inventory-success
+      inventory-fail: inventory-fail
+    consumer:
+      group-id: payment-group
+      auto-offset-reset: latest
+
   datasource:
     driver-class-name: org.postgresql.Driver
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5434}/${DB_NAME:inventory-db}
@@ -10,21 +20,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: 'create-drop'
+      ddl-auto: create-drop
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.
-  kafka:
-    bootstrap-servers: ${KAFKA_BROKER:localhost:9092}
-    topic:
-      orchestrator: orchestrator
-      inventory-validation-success: inventory-validation-success
-      inventory-validation-fail: inventory-validation-fai
-    consumer:
-      group-id: inventory-group
-      auto-offset-reset: latest
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
 logging:
   level:
     org:
       apache:
-        kafka: off
+        kafka: OFF

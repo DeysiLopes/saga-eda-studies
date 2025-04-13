@@ -20,7 +20,7 @@ spring:
     topic:
       orchestrator: orchestrator
       payment-validation-success: payment-validation-success
-      payment-validation-fail: payment-validation-fai
+      payment-validation-fail: payment-validation-fail
     consumer:
       group-id: payment-group
       auto-offset-reset: latest

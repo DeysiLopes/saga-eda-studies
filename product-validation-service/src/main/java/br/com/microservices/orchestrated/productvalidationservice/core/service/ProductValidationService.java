@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-import static br.com.microservices.orchestrated.productvalidationservice.core.enums.ESagaStatus.SUCCESS;
+import static br.com.microservices.orchestrated.productvalidationservice.core.enums.ESagaStatus.*;
 import static org.springframework.util.ObjectUtils.isEmpty;
 
 
@@ -34,7 +34,7 @@ public class ProductValidationService {
 
     public void validateExistingProducts(Event event){
         try{
-            checkCurruntValidation(event);
+            checkCurrentValidation(event);
             createValidation(event, true);
             handleSuccess(event);
         } catch (Exception e){
@@ -63,17 +63,16 @@ public class ProductValidationService {
             throw new ValidationException("OrderID and TransactionID must be informed!!");
         }
     }
-    private void checkCurruntValidation(Event event) {
+    private void checkCurrentValidation(Event event) {
         validateProductsInformed(event);
         if (validationRepository.existsByOrderIdAndTransactionId(
-                event.getOrderId(), event.getTransactionId()
-        )){
-            throw new ValidationException("There´s another transactionId for this validation."); // validaçao de idempotencia
+                event.getOrderId(), event.getTransactionId())) {
+            throw new ValidationException("There's another transactionId for this validation.");
         }
-        event.getPayload().getProducts().forEach(
-                product -> {
-
-                });
+        event.getPayload().getProducts().forEach(product -> {
+            validateProductInformed(product);
+            validateExistingProduct(product.getProduct().getCode());
+        });
     }
 
     private void validateProductInformed(OrderProducts products){
@@ -84,7 +83,7 @@ public class ProductValidationService {
 
     private void validateExistingProduct(String code){
         if (!productRepository.existsByCode(code)){
-            throw new ValidationException("Product noes not exist in database!");
+            throw new ValidationException("Product does not exist in database!");
         }
     }
 
@@ -105,4 +104,26 @@ public class ProductValidationService {
         event.addToHIstory(history);
     }
 
+    private void handleFailCurrentExecuted(Event event, String message) {
+        event.setStatus(ROLLBACK_PENDING);
+        event.setSource(CURRENT_SOURCE);
+        addHistory(event, "Fail to validate products: ".concat(message));
+    }
+
+    public void rollbackEvent(Event event){
+        changeValidationToFail(event);
+        event.setStatus(FAIL);
+        event.setSource(CURRENT_SOURCE);
+        addHistory(event,  "Rollback executed on product validation!");
+        producer.sendEvent(jsonUtil.toJson(event));
+    }
+
+    private void changeValidationToFail(Event event) {
+        validationRepository
+                .findByOrderIdAndTransactionId(event.getPayload().getId(), event.getTransactionId())
+                .ifPresentOrElse(validation ->{
+                    validation.setSuccess(false);
+                    validationRepository.save(validation);
+                }, () -> createValidation(event, false));
+    }
 }

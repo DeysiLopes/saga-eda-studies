@@ -4,7 +4,6 @@ import br.com.microservices.orchestrated.productvalidationservice.config.excepti
 import br.com.microservices.orchestrated.productvalidationservice.core.dto.Event;
 import br.com.microservices.orchestrated.productvalidationservice.core.dto.History;
 import br.com.microservices.orchestrated.productvalidationservice.core.dto.OrderProducts;
-import br.com.microservices.orchestrated.productvalidationservice.core.enums.ESagaStatus;
 import br.com.microservices.orchestrated.productvalidationservice.core.model.Validation;
 import br.com.microservices.orchestrated.productvalidationservice.core.producer.KafkaProducer;
 import br.com.microservices.orchestrated.productvalidationservice.core.repository.ProductRepository;
@@ -39,7 +38,7 @@ public class ProductValidationService {
             handleSuccess(event);
         } catch (Exception e){
             log.error("Error trying to validate products: ", e);
-            handleFailCurrentExecuted(event, e.getMessage());
+            handleFailCurrentNotExecuted(event, e.getMessage());
         }
         producer.sendEvent(jsonUtil.toJson(event));
     }
@@ -104,7 +103,7 @@ public class ProductValidationService {
         event.addToHIstory(history);
     }
 
-    private void handleFailCurrentExecuted(Event event, String message) {
+    private void handleFailCurrentNotExecuted(Event event, String message) {
         event.setStatus(ROLLBACK_PENDING);
         event.setSource(CURRENT_SOURCE);
         addHistory(event, "Fail to validate products: ".concat(message));

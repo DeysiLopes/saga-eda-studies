@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
-import static br.com.microservices.orchestrated.inventoryservice.core.enums.ESagaStatus.SUCCESS;
+import static br.com.microservices.orchestrated.inventoryservice.core.enums.ESagaStatus.*;
 
 @Slf4j
 @Service
@@ -38,7 +38,7 @@ public class InventoryService {
             handleSuccess(event);
         } catch (Exception e) {
             log.error("Error trying to update inventory: ", e);
-
+            handleFailCurrentNotExecuted(event, e.getMessage());
         }
         producer.sendEvent(jsonUtil.toJson(event));
     }
@@ -109,4 +109,34 @@ public class InventoryService {
                 .build();
         event.addToHIstory(history);
     }
+    private void handleFailCurrentNotExecuted(Event event, String message) {
+        event.setStatus(ROLLBACK_PENDING);
+        event.setSource(CURRENT_SOURCE);
+        addHistory(event, "Fail to update inventory: ".concat(message));
+    }
+
+    public void rollbackInventory(Event event){
+        event.setStatus(FAIL);
+        event.setSource(CURRENT_SOURCE);
+        try {
+            returnInventoryToPreviousValus(event);
+            addHistory(event,  "Rollback executed for inventory!");
+        } catch (Exception e) {
+            addHistory(event,  "Rollback not executed for inventory: ".concat(e.getMessage()));
+        }
+        producer.sendEvent(jsonUtil.toJson(event));
+    }
+
+    private void returnInventoryToPreviousValus(Event event) {
+        orderInventoryRepository
+                .findByOrderIdAndTransactionId(event.getPayload().getId(), event.getTransactionId())
+                .forEach(orderInventory -> {
+                    var inventory = orderInventory.getInventory();
+                    inventory.setAvailable(orderInventory.getOldQuantity());
+                    inventoryRepository.save(inventory);
+                    log.info("Restored inventory fpr order {} from {} to {}",
+                            event.getPayload().getId(), orderInventory.getNewQuantity(), inventory.getAvailable());
+                });
+    }
+
 }

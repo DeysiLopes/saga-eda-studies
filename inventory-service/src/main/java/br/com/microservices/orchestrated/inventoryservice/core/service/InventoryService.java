@@ -90,7 +90,7 @@ public class InventoryService {
 
     private void checkInventory(int available, int orderQuantity) {
         if (orderQuantity > available){
-            throw new ValidationException("Product i out of stock");
+            throw new ValidationException("Product is out of stock");
         }
     }
 
